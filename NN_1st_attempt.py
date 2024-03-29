@@ -1,7 +1,10 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.neural_network import MLPRegressor
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+
 
 # Load Filtered_ShadowMasks.npz
 filtered_data = np.load('Filtered_ShadowMasks.npz')
@@ -35,6 +38,8 @@ print("Number of points that don't change for all 1212 cases:", unchanged_points
 
 # Extract input features and target variable
 X = np.column_stack((efits_data['Bt0s'], efits_data['Ips'], efits_data['q95s'], efits_data['alpha1s'], efits_data['alpha2s']))
+
+
 y = filtered_data['ShadowMasks']
 
 print("Shape of X:", X.shape)
@@ -56,8 +61,16 @@ print("Shape of y_changed:", y_changed.shape)
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y_changed, test_size=0.2, random_state=42)
 
+#####   Normalization  ########
+
+input_norm = StandardScaler()
+input_norm.fit(X_train)
+#Apply normalization
+X_train = input_norm.transform(X_train)
+X_test = input_norm.transform(X_test)
+
 # Initialize MLP Regressor
-mlp_regressor = MLPRegressor(hidden_layer_sizes=(100,100,100), activation='relu', solver='adam', random_state=42)
+mlp_regressor = MLPClassifier(hidden_layer_sizes=(100,200,300), activation='relu', solver='adam', random_state=42)
 
 # Train the MLP Regressor
 mlp_regressor.fit(X_train, y_train)
