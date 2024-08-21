@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-
+import timeit
 
 
 # Load Filtered_ShadowMasks.npz
@@ -31,16 +31,21 @@ unchanged_points = np.sum(np.all(filtered_data['ShadowMasks'] == filtered_data['
 
 print("Number of points that don't change for all 1212 cases:", unchanged_points)
 
+### Remove non-diverted plasmas using Zlowest as parameter####
+
+Zlowest=efits_data['Zlowests']
+mask = Zlowest < -0.5
 
 
 #### ML training #########################
 
 
 # Extract input features and target variable
-X = np.column_stack((efits_data['Bt0s'], efits_data['Ips'], efits_data['q95s'], efits_data['alpha1s'], efits_data['alpha2s']))
 
-
+# Filter the features and target data according to the mask
+X = np.column_stack((efits_data['Bt0s'][mask],efits_data['Ips'][mask], efits_data['q95s'][mask], efits_data['alpha1s'][mask], efits_data['alpha2s'][mask]))
 y = filtered_data['ShadowMasks']
+
 
 print("Shape of X:", X.shape)
 print("Shape of y:", y.shape)
@@ -51,7 +56,7 @@ changed_indices = np.where(np.any(filtered_data['ShadowMasks'] != filtered_data[
 # Create new  output using the indices of the elements that change
 
 y_changed = filtered_data['ShadowMasks'][:, changed_indices]
-
+y_changed= y_changed[mask][:]
 # Print the shapes of the new variables
 
 print("Shape of y_changed:", y_changed.shape)
@@ -72,8 +77,14 @@ X_test = input_norm.transform(X_test)
 # Initialize MLP Regressor
 mlp_regressor = MLPClassifier(hidden_layer_sizes=(100,200,300), activation='relu', solver='adam', random_state=42)
 
-# Train the MLP Regressor
-mlp_regressor.fit(X_train, y_train)
+# Define a function to train the model
+def train_model():
+    mlp_regressor.fit(X_train, y_train)
+
+# Time the training function
+elapsed_time = timeit.timeit('train_model()', globals=globals(), number=1)
+
+print(f"Training completed in {elapsed_time:.2f} seconds.")
 
 # Evaluate the model
 y_pred = mlp_regressor.predict(X_test)
